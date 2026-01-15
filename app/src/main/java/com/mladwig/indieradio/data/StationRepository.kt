@@ -16,7 +16,7 @@ object StationRepository {
         RadioStation(
             id = "radiomke",
             name = "88Nine Radio Milwaukee",
-            streamUrl = "https://live.radiomilwaukee.org/radiomke.mp3",
+            streamUrl = "https://wyms.streamguys1.com/live",
             description = "Where Milwaukee discovers new music",
             genre = "Adult Alternative",
             location = "Milwaukee, WI",

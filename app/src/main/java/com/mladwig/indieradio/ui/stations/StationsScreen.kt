@@ -10,8 +10,10 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -24,8 +26,20 @@ fun StationsScreen(
     viewModel: StationsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    //Show an error message when it appears
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { error ->
+            snackbarHostState.showSnackbar(
+                message = error,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {Text("Indie Radio")},
@@ -40,6 +54,7 @@ fun StationsScreen(
                 NowPlayingBar(
                     station = uiState.currentStation!!,
                     isPlaying = uiState.isPlaying,
+                    isBuffering = uiState.isBuffering,
                     onPlayPauseClick = { viewModel.onPlayPauseClicked() }
 
                 )
@@ -70,6 +85,7 @@ fun StationsScreen(
 fun NowPlayingBar(
     station: RadioStation,
     isPlaying: Boolean,
+    isBuffering: Boolean = false,
     onPlayPauseClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -89,7 +105,7 @@ fun NowPlayingBar(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Now Playing",
+                    text = if (isBuffering) "Buffering..." else "Now Playing",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -100,13 +116,19 @@ fun NowPlayingBar(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-
-            IconButton(onClick = onPlayPauseClick) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    modifier = Modifier.size(32.dp)
+            if (isBuffering) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
+            }else {
+                IconButton(onClick = onPlayPauseClick) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
         }
 
