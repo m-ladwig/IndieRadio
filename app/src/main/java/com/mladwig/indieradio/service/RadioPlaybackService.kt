@@ -2,6 +2,9 @@ package com.mladwig.indieradio.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Intent
+import android.os.Binder
+import android.os.IBinder
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -21,10 +24,23 @@ class RadioPlaybackService : MediaSessionService() {
         //Exposes current station for ViewModel to observe
         var currentStation: RadioStation? = null
             private set
+
+        //Static reference to the service instance
+        private var instance : RadioPlaybackService? = null
+
+        fun getInstance(): RadioPlaybackService? = instance
     }
+
+    //Binder for local binding
+    inner class LocalBinder : Binder() {
+        fun getService(): RadioPlaybackService = this@RadioPlaybackService
+    }
+
+    private val binder = LocalBinder()
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
 
         //create the player
         player = ExoPlayer.Builder(this).build()
@@ -32,13 +48,12 @@ class RadioPlaybackService : MediaSessionService() {
         //listener for state changes
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState : Int){
-                //TODO add state update handlers
+                //State updates handled by MediaController listeners
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean){}
-            //TODO add play/pause state handler
+            //State updates handled by MediaController listeners
         })
-
 
         //create the MediaSession
         mediaSession = MediaSession.Builder(this, player)
@@ -48,11 +63,21 @@ class RadioPlaybackService : MediaSessionService() {
         createNotificationChannel()
     }
 
+    override fun onBind(intent: Intent?): IBinder? {
+        //return custom binder for local binding
+        return if (intent?.action == "LOCAL_BIND") {
+            binder
+        } else {
+            super.onBind(intent)
+        }
+    }
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) : MediaSession? {
         return mediaSession
     }
 
     override fun onDestroy() {
+        instance = null
         mediaSession?.run {
             player.release()
             release()

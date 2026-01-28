@@ -1,12 +1,17 @@
 package com.mladwig.indieradio.ui.stations
 
 import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.Player
+import androidx.media3.session.MediaController
 import com.mladwig.indieradio.data.StationRepository
 import com.mladwig.indieradio.model.RadioStation
+import com.mladwig.indieradio.player.MediaControllerManager
 import com.mladwig.indieradio.player.PlaybackState
 import com.mladwig.indieradio.player.RadioPlayerManager
+import com.mladwig.indieradio.service.RadioPlaybackService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,14 +28,15 @@ data class StationsUiState(
 
 class StationsViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val playerManager = RadioPlayerManager(application)
+    private val mediaControllerManager = MediaControllerManager(application)
+    private var mediaController : MediaController? = null
 
     private val _uiState = MutableStateFlow(StationsUiState())
     val uiState: StateFlow<StationsUiState> = _uiState.asStateFlow()
 
     init{
         loadStations()
-        observePlaybackState()
+        connectToService()
     }
 
     private fun loadStations(){
@@ -39,66 +45,77 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
-    private fun observePlaybackState(){
+    private fun connectToService(){
         viewModelScope.launch {
-            playerManager.playbackState.collect { state ->
-                when(state) {
-                    is PlaybackState.Playing -> {
-                        _uiState.value = _uiState.value.copy(
-                            isPlaying = true,
-                            isBuffering = false,
-                            errorMessage = null
-                        )
-                    }
-                    is PlaybackState.Paused -> {
-                        _uiState.value = _uiState.value.copy(
-                            isPlaying = false,
-                            isBuffering = false
-                        )
-                    }
-                    is PlaybackState.Buffering -> {
-                        _uiState.value = _uiState.value.copy(
-                            isBuffering = true
-                        )
-                    }
-                    is PlaybackState.Error -> {
-                        _uiState.value = _uiState.value.copy(
-                            isPlaying = false,
-                            isBuffering = false,
-                            errorMessage = state.message
-                        )
-                    }
-                    is PlaybackState.Idle -> {
-                        _uiState.value = _uiState.value.copy(
-                            isPlaying = false,
-                            isBuffering = false
-                        )
-                    }
-                }
+            try {
+                mediaController = mediaControllerManager.getController()
+                observePlayerState()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to connect to playback service"
+                )
             }
         }
     }
 
+    private fun observePlayerState() {
+        mediaController?.addListener(object : Player.Listener{
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                _uiState.value = _uiState.value.copy(
+                    isBuffering = playbackState == Player.STATE_BUFFERING,
+                    isPlaying = playbackState == Player.STATE_READY && mediaController?.isPlaying == true
+                )
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                _uiState.value = _uiState.value.copy(
+                    isPlaying = isPlaying,
+                    isBuffering = false
+                )
+            }
+        })
+    }
+
     fun onStationSelected(station: RadioStation) {
+        viewModelScope.launch {
+            //starts the service if not already running.
+            startService()
+        }
+
+        //Update UI immediately.
         _uiState.value = _uiState.value.copy(
             currentStation = station,
             errorMessage = null
         )
-        playerManager.playStation(station)
+
+        //Tell the service to play the selected station
+        val service = getService()
+        service?.playStation(station)
     }
 
     fun onPlayPauseClicked() {
-        if(_uiState.value.isPlaying) {
-            playerManager.pause()
-        }else {
-            playerManager.resume()
+        mediaController?.let { controller ->
+            if (controller.isPlaying) {
+                controller.pause()
+            } else {
+                controller.play()
+            }
         }
+    }
+
+    private fun startService() {
+        val intent = Intent(getApplication(), RadioPlaybackService::class.java)
+        getApplication<Application>().startService(intent)
+    }
+
+    private fun getService(): RadioPlaybackService? {
+        return RadioPlaybackService.getInstance()
     }
 
     //calls when ViewModel is destroyed
     //releases ExoPlayer to prevent memory leaks
     override fun onCleared() {
         super.onCleared()
-        playerManager.release()
+        mediaControllerManager.release()
     }
 }
