@@ -76,8 +76,15 @@ class RadioPlaybackService : MediaSessionService() {
         return mediaSession
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        //swiping away from recent apps --> close the app
+        stopSelf()
+    }
+
     override fun onDestroy() {
         instance = null
+        player.stop()
         mediaSession?.run {
             player.release()
             release()
