@@ -11,6 +11,7 @@ import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
 import androidx.compose.material3.TabRowDefaults
+import android.media.AudioAttributes
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -21,8 +22,40 @@ import com.mladwig.indieradio.model.RadioStation
 
 class RadioPlaybackService : MediaSessionService() {
 
+    //audio focus
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private var hasAudioFocus = false
+
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener{ focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                //Regain focus, resume playback if was playing
+                if (hasAudioFocus && !player.isPlaying) {
+                    player.play()
+                }
+                player.volume = 1.0f
+            }
+            AudioManager.AUDIOFOCUS_LOSS ->{
+                //Lost focus permanently - pause
+                hasAudioFocus = false
+                player.pause()
+            }
+
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                //phone call/alarm - pause
+                player.pause()
+            }
+
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                //Lost focus but can duck (i.e. notification sound) - lower volume
+                player.volume = 0.3f
+            }
+        }
+    }
+    //player
     private var mediaSession: MediaSession? = null
     private lateinit var player: ExoPlayer
+    //headphone removal
     private var becomingNoisyReceiver : BecomingNoisyReceiver? = null
 
     companion object {
@@ -62,9 +95,13 @@ class RadioPlaybackService : MediaSessionService() {
                 //State updates handled by MediaController listeners
             }
 
-            override fun onIsPlayingChanged(isPlaying: Boolean){}
-            //State updates handled by MediaController listeners
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                //State updates handled by MediaController listeners
+            }
         })
+
+        //request audio focus
+        requestAudioFocus()
 
         //create the MediaSession
         mediaSession = MediaSession.Builder(this, player)
@@ -94,6 +131,7 @@ class RadioPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        abandonAudioFocus()
         instance = null
         becomingNoisyReceiver?.unregister(this)
         becomingNoisyReceiver = null
@@ -104,6 +142,31 @@ class RadioPlaybackService : MediaSessionService() {
             mediaSession = null
         }
         super.onDestroy()
+    }
+
+    private fun requestAudioFocus() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+        audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            .setOnAudioFocusChangeListener(audioFocusChangeListener)
+            .build()
+
+        val result = audioManager.requestAudioFocus(audioFocusRequest!!)
+        hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }
+
+    private fun abandonAudioFocus() {
+        audioFocusRequest?.let {request ->
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.abandonAudioFocusRequest(request)
+        }
+        hasAudioFocus = false
     }
 
     private fun createNotificationChannel() {
