@@ -2,9 +2,15 @@ package com.mladwig.indieradio.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
+import androidx.compose.material3.TabRowDefaults
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -17,6 +23,7 @@ class RadioPlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private lateinit var player: ExoPlayer
+    private var becomingNoisyReceiver : BecomingNoisyReceiver? = null
 
     companion object {
         private const val CHANNEL_ID = "radio_playback_channel"
@@ -44,6 +51,10 @@ class RadioPlaybackService : MediaSessionService() {
 
         //create the player
         player = ExoPlayer.Builder(this).build()
+
+        //register headphone unplug listener
+        becomingNoisyReceiver = BecomingNoisyReceiver(player)
+        becomingNoisyReceiver?.register(this)
 
         //listener for state changes
         player.addListener(object : Player.Listener {
@@ -84,6 +95,8 @@ class RadioPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         instance = null
+        becomingNoisyReceiver?.unregister(this)
+        becomingNoisyReceiver = null
         player.stop()
         mediaSession?.run {
             player.release()
@@ -126,4 +139,34 @@ class RadioPlaybackService : MediaSessionService() {
         player.prepare()
         player.playWhenReady = true
     }
+
+    private class BecomingNoisyReceiver(
+        private val player: Player
+    ) : BroadcastReceiver() {
+
+        private var registered = false
+
+        fun register(context: Context) {
+            if (!registered) {
+                val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+                context.registerReceiver(this, filter)
+                registered = true
+            }
+        }
+
+        fun unregister(context: Context) {
+            if (registered) {
+                context.unregisterReceiver(this)
+                registered = false
+            }
+        }
+
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                //pauses playback if headphones unplugged.
+                player.pause()
+            }
+        }
+    }
+
 }
