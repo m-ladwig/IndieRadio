@@ -1,9 +1,14 @@
 package com.mladwig.indieradio.data
 
-import androidx.compose.material3.RadioButton
 import com.mladwig.indieradio.model.RadioStation
+import com.mladwig.indieradio.data.local.FavoriteStationDao
+import com.mladwig.indieradio.data.local.FavoriteStationEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
-object StationRepository {
+class StationRepository(
+    private val favoriteStationDao : FavoriteStationDao
+) {
     fun getStations() : List<RadioStation> = listOf(
         // Local/Midwest stations
         RadioStation(
@@ -93,4 +98,25 @@ object StationRepository {
             website = "https://nts.live"
         )
     )
+
+    fun getFavoriteStationIds(): Flow<Set<String>> {
+        return favoriteStationDao.getAllFavorites()
+            .map { favorites -> favorites.map { it.stationId }.toSet() }
+    }
+
+    suspend fun isFavorite(stationId: String): Boolean {
+        return favoriteStationDao.getFavorite(stationId) != null
+    }
+
+    suspend fun toggleFavorite(stationId: String) {
+        val existingStation = favoriteStationDao.getFavorite(stationId)
+        if (existingStation != null){
+            favoriteStationDao.deleteFavorite(existingStation)
+        } else {
+            favoriteStationDao.insertFavorite(
+                FavoriteStationEntity(stationId = stationId)
+            )
+        }
+    }
+
 }

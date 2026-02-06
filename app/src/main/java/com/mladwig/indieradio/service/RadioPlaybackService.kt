@@ -1,5 +1,6 @@
 package com.mladwig.indieradio.service
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
@@ -10,22 +11,25 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Binder
 import android.os.IBinder
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.compose.material3.TabRowDefaults
 import android.media.AudioAttributes
+import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.mladwig.indieradio.model.RadioStation
 
+@OptIn(UnstableApi::class)
 class RadioPlaybackService : MediaSessionService() {
-
     //audio focus
     private var audioFocusRequest: AudioFocusRequest? = null
     private var hasAudioFocus = false
-
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener{ focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> {
@@ -92,7 +96,10 @@ class RadioPlaybackService : MediaSessionService() {
         //listener for state changes
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState : Int){
-                //State updates handled by MediaController listeners
+                //stop service is completely ended/idle
+                if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) {
+                    stopSelf()
+                }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -110,6 +117,7 @@ class RadioPlaybackService : MediaSessionService() {
         //Create notification channel
         createNotificationChannel()
     }
+
 
     override fun onBind(intent: Intent?): IBinder? {
         //return custom binder for local binding
