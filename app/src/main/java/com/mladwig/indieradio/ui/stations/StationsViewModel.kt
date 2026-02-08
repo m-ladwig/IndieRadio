@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.mladwig.indieradio.data.StationRepository
+import com.mladwig.indieradio.data.local.IndieRadioDatabase
 import com.mladwig.indieradio.model.RadioStation
 import com.mladwig.indieradio.player.MediaControllerManager
 import com.mladwig.indieradio.player.PlaybackState
@@ -31,6 +32,11 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
     private val mediaControllerManager = MediaControllerManager(application)
     private var mediaController : MediaController? = null
 
+    private val stationRepository : StationRepository by lazy {
+        val database = IndieRadioDatabase.getDatabase(application)
+        StationRepository(database.favoriteStationDao())
+    }
+
     private val _uiState = MutableStateFlow(StationsUiState())
     val uiState: StateFlow<StationsUiState> = _uiState.asStateFlow()
 
@@ -41,7 +47,7 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
 
     private fun loadStations(){
         _uiState.value = _uiState.value.copy(
-            stations = StationRepository.getStations()
+            stations = stationRepository.getStations()
         )
     }
 
