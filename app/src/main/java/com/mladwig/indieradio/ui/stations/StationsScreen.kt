@@ -1,5 +1,6 @@
 package com.mladwig.indieradio.ui.stations
 
+import android.R
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -68,16 +69,62 @@ fun StationsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(uiState.stations) { station ->
+            //Favorites section
+            val favoriteStations = uiState.stations.filter {
+                uiState.favoriteStationIds.contains(it.id)
+            }
+
+            if (favoriteStations.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "⭐ FAVORITES",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+            }
+
+            items(favoriteStations) { station ->
                 StationListItem(
                     station = station,
                     isCurrentStation = station.id == uiState.currentStation?.id,
                     isPlaying = uiState.isPlaying,
-                    onStationClick = { viewModel.onStationSelected(it)}
+                    isFavorite = true,
+                    onStationClick = { viewModel.onStationSelected(it) },
+                    onFavoriteClick = { viewModel.onFavoriteClicked(it) }
                 )
             }
-        }
 
+            //All stations section
+            val nonFavoriteStations = uiState.stations.filter {
+                !uiState.favoriteStationIds.contains(it.id)
+            }
+
+            if (nonFavoriteStations.isNotEmpty()) {
+                item {
+                    Text(
+                        text = if (favoriteStations.isNotEmpty()) "ALL STATIONS" else "STATIONS",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+
+                items(nonFavoriteStations,
+                    key = { it.id }
+                ) { station ->
+                    StationListItem(
+                        station = station,
+                        isCurrentStation = station.id == uiState.currentStation?.id,
+                        isPlaying = uiState.isPlaying,
+                        isFavorite = false,
+                        onStationClick = { viewModel.onStationSelected(it) },
+                        onFavoriteClick = { viewModel.onFavoriteClicked(it) }
+                    )
+                }
+            }
+        }
     }
 }
 

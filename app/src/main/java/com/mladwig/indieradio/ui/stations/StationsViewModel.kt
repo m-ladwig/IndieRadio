@@ -24,7 +24,8 @@ data class StationsUiState(
     val currentStation: RadioStation? = null,
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val favoriteStationIds: Set<String> = emptySet()
 )
 
 class StationsViewModel(application: Application) : AndroidViewModel(application) {
@@ -32,6 +33,7 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
     private val mediaControllerManager = MediaControllerManager(application)
     private var mediaController : MediaController? = null
 
+    //Create repository instance
     private val stationRepository : StationRepository by lazy {
         val database = IndieRadioDatabase.getDatabase(application)
         StationRepository(database.favoriteStationDao())
@@ -42,6 +44,7 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
 
     init{
         loadStations()
+        observeFavorites()
         connectToService()
     }
 
@@ -49,6 +52,16 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(
             stations = stationRepository.getStations()
         )
+    }
+
+    private fun observeFavorites() {
+        viewModelScope.launch {
+            stationRepository.getFavoriteStationIds().collect { favoriteIds ->
+                _uiState.value = _uiState.value.copy(
+                    favoriteStationIds = favoriteIds
+                )
+            }
+        }
     }
 
     private fun connectToService(){
@@ -106,6 +119,12 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
             } else {
                 controller.play()
             }
+        }
+    }
+
+    fun onFavoriteClicked(station: RadioStation) {
+        viewModelScope.launch {
+            stationRepository.toggleFavorite(station.id)
         }
     }
 
