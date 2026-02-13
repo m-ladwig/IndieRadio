@@ -1,10 +1,12 @@
 package com.mladwig.indieradio.data
 
+import androidx.compose.ui.graphics.Color
 import com.mladwig.indieradio.model.RadioStation
 import com.mladwig.indieradio.data.local.FavoriteStationDao
 import com.mladwig.indieradio.data.local.FavoriteStationEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import okio.blackholeSink
 
 class StationRepository(
     private val favoriteStationDao : FavoriteStationDao
@@ -18,7 +20,8 @@ class StationRepository(
             description = "Where Milwaukee discovers new music",
             genre = "Adult Album Alternative",
             location = "Milwaukee, WI",
-            website = "https://radiomilwaukee.org"
+            website = "https://radiomilwaukee.org",
+            primaryColor = Color(0xFFF79822)
         ),
         RadioStation(
             id = "riverwestradio",
@@ -27,7 +30,8 @@ class StationRepository(
             description = "Where the world experiences Riverwest",
             genre = "Community/Eclectic",
             location = "Riverwest, Milwaukee, WI",
-            website = "https://riverwestradio.com"
+            website = "https://riverwestradio.com",
+            primaryColor = Color(0xFF636B2F)
         ),
         RadioStation(
             id = "thecurrent",
@@ -36,7 +40,8 @@ class StationRepository(
             description = "Minnesota's music discovery",
             genre = "Alternative",
             location = "Minneapolis, MN",
-            website = "https://thecurrent.org"
+            website = "https://thecurrent.org",
+            primaryColor = Color(0xFF52C9E8)
         ),
 
         // Colorado
@@ -47,7 +52,9 @@ class StationRepository(
             description = "Colorado's independent music station",
             genre = "Adult Album Alternative",
             location = "Denver, CO",
-            website = "https://coloradosound.org"
+            website = "https://coloradosound.org",
+            primaryColor = Color(0xFF967BB6)
+
         ),
         // East Coast
         RadioStation(
@@ -57,7 +64,8 @@ class StationRepository(
             description = "Longest-running freeform radio in the US",
             genre = "Freeform",
             location = "Jersey City, NJ",
-            website = "https://wfmu.org"
+            website = "https://wfmu.org",
+            primaryColor = Color(0xFF93E9BE)
         ),
         RadioStation(
             id = "wxpn",
@@ -66,7 +74,8 @@ class StationRepository(
             description = "Home of World Cafe",
             genre = "Adult Album Alternative",
             location = "Philadelphia, PA",
-            website = "https://xpn.org"
+            website = "https://xpn.org",
+            primaryColor = Color(0xFFCD1C18)
         ),
         //West Coast
         RadioStation(
@@ -76,7 +85,8 @@ class StationRepository(
             description = "Where the music matters",
             genre = "Alternative/Indie",
             location = "Seattle, WA",
-            website = "https://kexp.org"
+            website = "https://kexp.org",
+            primaryColor = Color(0XFFFBAC31)
         ),
         RadioStation(
             id = "kcrw",
@@ -85,7 +95,8 @@ class StationRepository(
             description = "Eclectic music from LA",
             genre = "Eclectic/NPR",
             location = "Santa Monica, CA",
-            website = "https://kcrw.com"
+            website = "https://kcrw.com",
+            primaryColor = Color(0xFF4CBB17)
         ),
         //International
         RadioStation(
@@ -95,7 +106,8 @@ class StationRepository(
             description = "Cutting-edge underground music",
             genre = "Underground",
             location = "London, UK",
-            website = "https://nts.live"
+            website = "https://nts.live",
+            primaryColor = Color(0xFF38000A)
         )
     )
 

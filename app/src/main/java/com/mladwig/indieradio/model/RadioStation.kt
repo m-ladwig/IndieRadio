@@ -1,6 +1,7 @@
 package com.mladwig.indieradio.model
 
 import android.R
+import androidx.compose.ui.graphics.Color
 
 data class RadioStation(
     val id: String,
@@ -10,5 +11,6 @@ data class RadioStation(
     val genre: String,
     val location: String,
     val logoUrl: String? = null,
-    val website: String? = null
+    val website: String? = null,
+    val primaryColor: Color = Color.White
 )

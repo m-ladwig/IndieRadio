@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -62,11 +65,13 @@ fun StationsScreen(
             }
         }
     ) { paddingValues ->
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
             contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             //Favorites section
@@ -75,7 +80,7 @@ fun StationsScreen(
             }
 
             if (favoriteStations.isNotEmpty()) {
-                item {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                     Text(
                         text = "⭐ FAVORITES",
                         style = MaterialTheme.typography.labelLarge,
@@ -85,8 +90,11 @@ fun StationsScreen(
                 }
             }
 
-            items(favoriteStations) { station ->
-                StationListItem(
+            items(
+                items = favoriteStations,
+                key = {it.id}
+            ) { station ->
+                StationGridItem(
                     station = station,
                     isCurrentStation = station.id == uiState.currentStation?.id,
                     isPlaying = uiState.isPlaying,
@@ -102,7 +110,7 @@ fun StationsScreen(
             }
 
             if (nonFavoriteStations.isNotEmpty()) {
-                item {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2 )}) {
                     Text(
                         text = if (favoriteStations.isNotEmpty()) "ALL STATIONS" else "STATIONS",
                         style = MaterialTheme.typography.labelLarge,
@@ -114,7 +122,7 @@ fun StationsScreen(
                 items(nonFavoriteStations,
                     key = { it.id }
                 ) { station ->
-                    StationListItem(
+                    StationGridItem(
                         station = station,
                         isCurrentStation = station.id == uiState.currentStation?.id,
                         isPlaying = uiState.isPlaying,
@@ -130,11 +138,11 @@ fun StationsScreen(
 
 @Composable
 fun NowPlayingBar(
+    modifier: Modifier = Modifier,
     station: RadioStation,
     isPlaying: Boolean,
     isBuffering: Boolean = false,
-    onPlayPauseClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onPlayPauseClick: () -> Unit
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
