@@ -145,7 +145,9 @@ fun NowPlayingBar(
     onPlayPauseClick: () -> Unit
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars),
         color = MaterialTheme.colorScheme.secondaryContainer,
         tonalElevation = 3.dp
     ) {
