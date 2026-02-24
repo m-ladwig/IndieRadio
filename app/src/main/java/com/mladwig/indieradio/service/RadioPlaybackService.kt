@@ -27,7 +27,7 @@ import com.mladwig.indieradio.model.RadioStation
 
 @OptIn(UnstableApi::class)
 class RadioPlaybackService : MediaSessionService() {
-    //audio focus
+    // Audio focus
     private var audioFocusRequest: AudioFocusRequest? = null
     private var hasAudioFocus = false
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener{ focusChange ->
@@ -56,44 +56,24 @@ class RadioPlaybackService : MediaSessionService() {
             }
         }
     }
-    //player
+
+    // Player
     private var mediaSession: MediaSession? = null
     private lateinit var player: ExoPlayer
-    //headphone removal
+
+    // Headphone removal
     private var becomingNoisyReceiver : BecomingNoisyReceiver? = null
-
-    companion object {
-        private const val CHANNEL_ID = "radio_playback_channel"
-
-        //Exposes current station for ViewModel to observe
-        var currentStation: RadioStation? = null
-            private set
-
-        //Static reference to the service instance
-        private var instance : RadioPlaybackService? = null
-
-        fun getInstance(): RadioPlaybackService? = instance
-    }
-
-    //Binder for local binding
-    inner class LocalBinder : Binder() {
-        fun getService(): RadioPlaybackService = this@RadioPlaybackService
-    }
-
-    private val binder = LocalBinder()
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
-
-        //create the player
+        // Create the player
         player = ExoPlayer.Builder(this).build()
 
-        //register headphone unplug listener
+        // Register headphone unplug listener
         becomingNoisyReceiver = BecomingNoisyReceiver(player)
         becomingNoisyReceiver?.register(this)
 
-        //listener for state changes
+        // Listener for state changes
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState : Int){
                 //stop service is completely ended/idle
@@ -118,16 +98,6 @@ class RadioPlaybackService : MediaSessionService() {
         createNotificationChannel()
     }
 
-
-    override fun onBind(intent: Intent?): IBinder? {
-        //return custom binder for local binding
-        return if (intent?.action == "LOCAL_BIND") {
-            binder
-        } else {
-            super.onBind(intent)
-        }
-    }
-
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) : MediaSession? {
         return mediaSession
     }
@@ -140,7 +110,6 @@ class RadioPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         abandonAudioFocus()
-        instance = null
         becomingNoisyReceiver?.unregister(this)
         becomingNoisyReceiver = null
         player.stop()
@@ -179,7 +148,7 @@ class RadioPlaybackService : MediaSessionService() {
 
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
-            CHANNEL_ID,
+            "radio_playback_channel",
             "Radio Playback",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
@@ -189,26 +158,6 @@ class RadioPlaybackService : MediaSessionService() {
 
         val notificationManager = getSystemService(NotificationManager::class.java)
         notificationManager.createNotificationChannel(channel)
-    }
-
-    //Public function for the ViewModel to call
-    fun playStation(station : RadioStation) {
-        currentStation = station
-
-        val mediaItem = MediaItem.Builder()
-            .setUri(station.streamUrl)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(station.name)
-                    .setArtist(station.location)
-                    .setAlbumTitle(station.genre)
-                    .build()
-            )
-            .build()
-
-        player.setMediaItem(mediaItem)
-        player.prepare()
-        player.playWhenReady = true
     }
 
     private class BecomingNoisyReceiver(

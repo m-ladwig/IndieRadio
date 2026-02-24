@@ -2,16 +2,17 @@ package com.mladwig.indieradio.ui.stations
 
 import android.app.Application
 import android.content.Intent
+import android.media.browse.MediaBrowser
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.mladwig.indieradio.data.StationRepository
 import com.mladwig.indieradio.data.local.IndieRadioDatabase
 import com.mladwig.indieradio.model.RadioStation
 import com.mladwig.indieradio.player.MediaControllerManager
-import com.mladwig.indieradio.player.PlaybackState
-import com.mladwig.indieradio.player.RadioPlayerManager
 import com.mladwig.indieradio.service.RadioPlaybackService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -107,9 +108,23 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
             errorMessage = null
         )
 
-        //Tell the service to play the selected station
-        val service = getService()
-        service?.playStation(station)
+        //Play via MediaController
+        mediaController?.let { controller ->
+            val mediaItem = MediaItem.Builder()
+                .setUri(station.streamUrl)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(station.name)
+                        .setArtist(station.location)
+                        .setAlbumTitle(station.genre)
+                        .build()
+                )
+                .build()
+
+            controller.setMediaItem(mediaItem)
+            controller.prepare()
+            controller.play()
+        }
     }
 
     fun onPlayPauseClicked() {
@@ -131,10 +146,6 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
     private fun startService() {
         val intent = Intent(getApplication(), RadioPlaybackService::class.java)
         getApplication<Application>().startService(intent)
-    }
-
-    private fun getService(): RadioPlaybackService? {
-        return RadioPlaybackService.getInstance()
     }
 
     //calls when ViewModel is destroyed
