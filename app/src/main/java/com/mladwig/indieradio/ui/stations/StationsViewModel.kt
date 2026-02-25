@@ -2,11 +2,11 @@ package com.mladwig.indieradio.ui.stations
 
 import android.app.Application
 import android.content.Intent
-import android.media.browse.MediaBrowser
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.mladwig.indieradio.data.StationRepository
@@ -29,16 +29,13 @@ data class StationsUiState(
     val favoriteStationIds: Set<String> = emptySet()
 )
 
-class StationsViewModel(application: Application) : AndroidViewModel(application) {
+class StationsViewModel(
+    application: Application,
+    private val repository: StationRepository
+) : AndroidViewModel(application) {
 
     private val mediaControllerManager = MediaControllerManager(application)
     private var mediaController : MediaController? = null
-
-    //Create repository instance
-    private val stationRepository : StationRepository by lazy {
-        val database = IndieRadioDatabase.getDatabase(application)
-        StationRepository(database.favoriteStationDao())
-    }
 
     private val _uiState = MutableStateFlow(StationsUiState())
     val uiState: StateFlow<StationsUiState> = _uiState.asStateFlow()
@@ -51,13 +48,13 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
 
     private fun loadStations(){
         _uiState.value = _uiState.value.copy(
-            stations = stationRepository.getStations()
+            stations = repository.getStations()
         )
     }
 
     private fun observeFavorites() {
         viewModelScope.launch {
-            stationRepository.getFavoriteStationIds().collect { favoriteIds ->
+            repository.getFavoriteStationIds().collect { favoriteIds ->
                 _uiState.value = _uiState.value.copy(
                     favoriteStationIds = favoriteIds
                 )
@@ -92,6 +89,20 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
                     isPlaying = isPlaying,
                     isBuffering = false
                 )
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                 _uiState.value = _uiState.value.copy(
+                     isPlaying = false,
+                     isBuffering = false,
+                     errorMessage = when {
+                         error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
+                             "Network connection failed. Please check your internet."
+                         error.errorCode == PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE ->
+                             "Invalid stream format for ${_uiState.value.currentStation?.name}"
+                         else -> "Playback error: ${error.message ?: "Unknown error"}"
+                     }
+                 )
             }
         })
     }
@@ -139,7 +150,7 @@ class StationsViewModel(application: Application) : AndroidViewModel(application
 
     fun onFavoriteClicked(station: RadioStation) {
         viewModelScope.launch {
-            stationRepository.toggleFavorite(station.id)
+            repository.toggleFavorite(station.id)
         }
     }
 

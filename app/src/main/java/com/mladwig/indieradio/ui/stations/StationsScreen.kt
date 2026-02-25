@@ -1,14 +1,13 @@
 package com.mladwig.indieradio.ui.stations
 
 import android.R
+import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
@@ -20,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mladwig.indieradio.model.RadioStation
@@ -27,7 +27,11 @@ import com.mladwig.indieradio.model.RadioStation
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StationsScreen(
-    viewModel: StationsViewModel = viewModel()
+    viewModel: StationsViewModel = viewModel(
+        factory = StationsViewModelFactory(
+            application = LocalContext.current.applicationContext as Application
+        )
+    )
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
